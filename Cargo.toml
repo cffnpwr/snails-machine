@@ -1,0 +1,23 @@
+[package]
+name = "Snails-Machine"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "snails_machine"
+path = "src/lib.rs"
+
+[[bin]]
+name = "snails-machine"
+path = "src/bin.rs"
+
+[dependencies]
+anyhow = "1.0.86"
+clap = { version = "4.5.7", features = ["derive"] }
+colored = "2.1.0"
+serde = { version = "1.0.203", features = ["derive"] }
+serde_derive = "1.0.203"
+serde_json = "1.0.117"
+serde_yaml = "0.9.34"
+thiserror = "1.0.61"
+toml = "0.8.14"

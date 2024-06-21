@@ -1,0 +1,16 @@
+{
+  "name": "Snail's Machine",
+  "dockerComposeFile": "./compose.yaml",
+  "service": "tm",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Swellaby.rust-pack",
+        "EditorConfig.EditorConfig",
+        "GitHub.copilot",
+        "dustypomerleau.rust-syntax"
+      ]
+    }
+  }
+}

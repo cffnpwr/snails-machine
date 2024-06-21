@@ -1,0 +1,7 @@
+services:
+  tm:
+    build: .
+    volumes:
+      - ..:/workspace:cacheds
+    tty: true
+    init: true
