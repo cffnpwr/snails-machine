@@ -8,7 +8,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the Turing machine definition file
-    #[arg(short, long, default_value = "machine.toml")]
+    #[arg(short = 'f', long = "file", default_value = "machine.toml")]
     machine_file_path: String,
 
     /// Initial tape content
