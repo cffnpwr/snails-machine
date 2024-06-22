@@ -7,13 +7,13 @@ use thiserror::Error;
 #[error("Turing machine is stuck")]
 pub struct Stuck;
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum Direction {
     Left,
     Right,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Transition {
     to: Rc<RefCell<State>>,
     read: String,
@@ -31,7 +31,7 @@ impl Transition {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct State {
     pub name: String,
     transitions: Vec<Transition>,

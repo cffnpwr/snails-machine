@@ -8,7 +8,7 @@ use std::{
 };
 
 #[derive(Debug, Deserialize)]
-pub struct Transition {
+pub struct ConfigTransition {
     pub from: String,
     pub to: String,
     pub read: String,
@@ -18,7 +18,7 @@ pub struct Transition {
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub transitions: Vec<Transition>,
+    pub transitions: Vec<ConfigTransition>,
     pub initial_state: String,
     pub accept_states: Vec<String>,
     pub blank: String,
