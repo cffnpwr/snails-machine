@@ -25,3 +25,11 @@ toml = "0.8.14"
 
 [workspace]
 members = ["patricia-tree"]
+
+[profile.release]
+debug = false
+lto = true
+codegen-units = 1
+opt-level = "z"
+strip = true
+panic = "abort"

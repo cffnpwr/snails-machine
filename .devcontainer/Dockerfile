@@ -11,8 +11,6 @@ RUN tar -xzf mold.tar.gz --strip-components 1
 
 FROM mcr.microsoft.com/devcontainers/rust:1-1-bookworm as runner
 
-COPY --from=mold /mold/ /usr/local/
-
 RUN apt-get update -qq; \
     apt-get install -qq --no-install-recommends \
     clang \
@@ -23,3 +21,6 @@ RUN apt-get update -qq; \
     rm -rf /var/lib/apt/lists/*; \
     rustup target add aarch64-unknown-linux-gnu; \
     rustup target add x86_64-unknown-linux-gnu;
+
+COPY ./cargo-config.toml /.cargo/config.toml
+COPY --from=mold /mold/ /usr/local/
