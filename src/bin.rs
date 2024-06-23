@@ -1,6 +1,7 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Parser;
 use colored::Colorize;
+use patricia_tree::PatriciaNode;
 use snails_machine::{Config, State, Transition, TuringMachine};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
@@ -19,8 +20,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
     let config = Config::read_from_file(args.machine_file_path)?;
 
-    let mut state_names = config
-        .transitions
+    let mut state_names = (config.transitions)
         .iter()
         .map(|t| [t.from.clone(), t.to.clone()])
         .flatten()
@@ -37,7 +37,7 @@ fn main() -> Result<()> {
         })
         .collect::<HashMap<_, _>>();
 
-    for transition in config.transitions {
+    for transition in &config.transitions {
         let from = states.get(&transition.from.as_str()).unwrap();
         let to = states.get(&transition.to.as_str()).unwrap();
         from.borrow_mut().add_transition(Transition::new(
@@ -51,18 +51,26 @@ fn main() -> Result<()> {
     let initial_state = states.get(&config.initial_state.as_str()).unwrap();
     let accept_states = config
         .accept_states
-        .iter()
-        .map(|name| states.get(&name.as_str()).unwrap())
-        .collect::<Vec<_>>();
-    let accept_states = accept_states
         .into_iter()
-        .map(|s| s.clone())
+        .map(|name| states.get(name.as_str()).unwrap().clone())
         .collect::<Vec<_>>();
+
+    let mut alphabet = config
+        .transitions
+        .iter()
+        .map(|t| [t.read.clone(), t.write.clone()])
+        .flatten()
+        .collect::<Vec<_>>();
+    alphabet.sort();
+    alphabet.dedup();
 
     let mut tm = TuringMachine::new(
         &initial_state,
         accept_states.as_slice(),
-        &args.tape.chars().map(|c| c.to_string()).collect::<Vec<_>>(),
+        &string_to_tape(
+            &args.tape,
+            alphabet.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
+        )?,
         config.blank.as_str(),
     );
 
@@ -93,4 +101,87 @@ fn main() -> Result<()> {
     println!("{:>7}: [{}]", tm.status.to_string(), tm.tape.join(""),);
 
     Ok(())
+}
+
+fn string_to_tape<'a>(s: &str, alphabet: impl Into<Vec<&'a str>>) -> Result<Vec<String>> {
+    let alphabet = alphabet.into();
+    let mut tree = PatriciaNode::new(alphabet[0]);
+    for name in alphabet.iter().skip(1) {
+        tree.insert(name).unwrap();
+    }
+
+    let mut tape = vec![];
+    let mut chars = s.chars().peekable();
+    let mut buf = String::new();
+    while let Some(&c) = chars.peek() {
+        buf.push(c);
+        match (buf.len() == 1, tree.search(&buf)) {
+            (true, false) => {
+                chars.next();
+            }
+            (false, false) => {
+                buf.pop();
+                if alphabet.contains(&buf.as_str()) {
+                    tape.push(buf.clone());
+                    buf.clear();
+                } else {
+                    chars.next();
+                }
+            }
+            _ => {
+                chars.next();
+            }
+        }
+    }
+    if !buf.is_empty() {
+        if alphabet.contains(&buf.as_str()) {
+            tape.push(buf);
+        } else {
+            return Err(anyhow!(
+                "Invalid tape symbol: \"{}\". Tape symbol must be one of {}.",
+                buf,
+                alphabet
+                    .iter()
+                    .map(|a| format!("\"{}\"", a))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ));
+        }
+    }
+
+    Ok(tape)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn to_vec_string(v: Vec<&str>) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn test_string_to_tape() {
+        let alphabet = ["a", "b", "c", "d", "e"];
+        let tape = string_to_tape("abcde", &alphabet);
+
+        assert!(tape.is_ok());
+        assert_eq!(tape.unwrap(), to_vec_string(vec!["a", "b", "c", "d", "e"]));
+
+        let alphabet = ["a", "a'", "#a", "a''", "b", "c"];
+        let tape = string_to_tape("aaaabbbb#aa'a''", &alphabet);
+
+        assert!(tape.is_ok());
+        assert_eq!(
+            tape.unwrap(),
+            to_vec_string(vec![
+                "a", "a", "a", "a", "b", "b", "b", "b", "#a", "a'", "a''"
+            ])
+        );
+
+        let alphabet = ["a", "a'", "#a", "a''", "b", "c"];
+        let tape = string_to_tape("ab#a'a''", &alphabet);
+
+        assert!(tape.is_err());
+    }
 }
