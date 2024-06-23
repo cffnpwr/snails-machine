@@ -9,8 +9,12 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to the Turing machine definition file
-    #[arg(short = 'f', long = "file", default_value = "machine.toml")]
+    #[arg(short = 'f', long = "file", default_value = "./machine.toml")]
     machine_file_path: String,
+
+    /// Whether to use monospace font
+    #[arg(short = 'm', long = "monospace")]
+    is_monospace: bool,
 
     /// Initial tape content
     tape: String,
@@ -76,29 +80,78 @@ fn main() -> Result<()> {
 
     while let Some(_) = tm.next() {}
 
-    let tape_len = tm.tape.len();
     let offset = tm.start_ptr;
-    for mut snapshot in tm.snapshots {
-        let s = &snapshot.tape[snapshot.tape_ptr];
-        snapshot.tape[snapshot.tape_ptr] = s.reversed().green().to_string();
-        let tape = snapshot.tape.join("");
-        let tape = format!("{}{}", tm.blank.repeat(offset - snapshot.start_ptr), tape,);
+    let mut max_tape_symbol_lens = vec![0; tm.tape.len()];
+    for snapshot in &tm.snapshots {
+        for (i, s) in snapshot.tape.iter().enumerate() {
+            let i = i + (offset - snapshot.start_ptr);
+            max_tape_symbol_lens[i] = max_tape_symbol_lens
+                .get(i)
+                .map_or(s.len(), |len| *len.max(&s.len()));
+        }
+    }
+    let max_tape_symbol_len = *max_tape_symbol_lens.iter().max().unwrap_or(&1);
+    for snapshot in tm.snapshots {
+        let tape = snapshot
+            .tape
+            .into_iter()
+            .enumerate()
+            .map(|(i, s)| {
+                let i = i + (offset - snapshot.start_ptr);
+                let len = if args.is_monospace {
+                    max_tape_symbol_len
+                } else {
+                    max_tape_symbol_lens[i]
+                };
+                let s = if s == tm.blank { s.repeat(len) } else { s };
+                format!("{:<len$}", s)
+            })
+            .collect::<Vec<_>>();
+
+        let blank = if args.is_monospace {
+            tm.blank.repeat(max_tape_symbol_len)
+        } else {
+            tm.blank.clone()
+        };
+        let mut tmp = vec![blank.clone(); offset - snapshot.start_ptr];
+        tmp.extend(tape.clone());
+        tmp.extend(vec![blank.clone(); tm.tape.len() - tmp.len()]);
+        let mut tape = tmp;
+
+        let tape_ptr = snapshot.tape_ptr + (offset - snapshot.start_ptr);
+        let s = &tape[tape_ptr];
+        tape[tape_ptr] = s.reversed().green().to_string();
+        let tape = tape.join("");
 
         println!(
-            "{:>7}: [{}{blanks}]: ({}, {}) -> ({}, {})",
+            "{:>7}: [{}]: ({}, {}) -> ({}, {})",
             snapshot.status,
             tape,
             snapshot.current_state,
             snapshot.read,
             snapshot.next_state,
             snapshot.write,
-            blanks = tm.blank.repeat(tape_len - (tape.len() - 11))
         );
     }
 
-    let s = &tm.tape[tm.tape_ptr];
-    tm.tape[tm.tape_ptr] = s.reversed().green().to_string();
-    println!("{:>7}: [{}]", tm.status.to_string(), tm.tape.join(""),);
+    let mut tape = tm
+        .tape
+        .into_iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let i = i + (offset - tm.start_ptr);
+            let len = if args.is_monospace {
+                max_tape_symbol_len
+            } else {
+                max_tape_symbol_lens[i]
+            };
+            let s = if s == tm.blank { s.repeat(len) } else { s };
+            format!("{:<len$}", s)
+        })
+        .collect::<Vec<_>>();
+    let s = &tape[tm.tape_ptr];
+    tape[tm.tape_ptr] = s.reversed().green().to_string();
+    println!("{:>7}: [{}]", tm.status.to_string(), tape.join(""),);
 
     Ok(())
 }
