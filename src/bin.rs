@@ -20,6 +20,10 @@ struct Args {
     #[arg(short = 's', long = "separator")]
     show_separator: bool,
 
+    /// Whether to use snail mode
+    #[arg(long = "snail")]
+    is_snail_mode: bool,
+
     /// Initial tape content
     tape: String,
 }
@@ -123,15 +127,29 @@ fn main() -> Result<()> {
             get_max_tape_symbol_len,
         );
 
-        println!(
-            "{:>7}: [{}]: ({}, {}) -> ({}, {})",
-            snapshot.status,
-            tape,
-            snapshot.current_state,
-            snapshot.read,
-            snapshot.next_state,
-            snapshot.write,
-        );
+        if args.is_snail_mode {
+            let ptr = tape_ptr + offset - start_ptr;
+            let blanks = (0..ptr)
+                .map(|i| {
+                    " ".repeat(get_max_tape_symbol_len(i) + if args.show_separator { 1 } else { 0 })
+                })
+                .collect::<String>();
+            println!("[{}]", tape);
+            println!(
+                " {blanks}🐌<[({}, {}) -> ({}, {})]",
+                snapshot.current_state, snapshot.read, snapshot.next_state, snapshot.write,
+            );
+        } else {
+            println!(
+                "{:>7}: [{}]: ({}, {}) -> ({}, {})",
+                snapshot.status,
+                tape,
+                snapshot.current_state,
+                snapshot.read,
+                snapshot.next_state,
+                snapshot.write,
+            );
+        }
     }
 
     let tape = tm.tape;
@@ -146,7 +164,18 @@ fn main() -> Result<()> {
         tape_len,
         get_max_tape_symbol_len,
     );
-    println!("{:>7}: [{}]", tm.status.to_string(), tape);
+    if args.is_snail_mode {
+        let ptr = tape_ptr + offset - start_ptr;
+        let blanks = (0..ptr)
+            .map(|i| {
+                " ".repeat(get_max_tape_symbol_len(i) + if args.show_separator { 1 } else { 0 })
+            })
+            .collect::<String>();
+        println!("[{}]", tape);
+        println!(" {blanks}🐌<[{}]", tm.status.to_string())
+    } else {
+        println!("{:>7}: [{}]", tm.status.to_string(), tape);
+    }
 
     Ok(())
 }
