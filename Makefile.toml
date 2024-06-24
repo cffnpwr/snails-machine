@@ -1,0 +1,31 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[tasks.build]
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.build-all]
+dependencies = ["build-amd64-linux", "build-arm64-linux", "build-amd64-darwin", "build-arm64-darwin"]
+script.post = '''
+if [ -d ./target ]; then
+    llvm-strip-14 ./target/aarch64-apple-darwin/release/snails-machine
+    llvm-strip-14 ./target/x86_64-apple-darwin/release/snails-machine
+fi
+'''
+
+[tasks.build-amd64-linux]
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-unknown-linux-gnu"]
+
+[tasks.build-arm64-linux]
+command = "cargo"
+args = ["build", "--release", "--target", "aarch64-unknown-linux-gnu"]
+
+[tasks.build-arm64-darwin]
+command = "cargo"
+args = ["build", "--release", "--target", "aarch64-apple-darwin"]
+
+[tasks.build-amd64-darwin]
+command = "cargo"
+args = ["build", "--release", "--target", "x86_64-apple-darwin"]

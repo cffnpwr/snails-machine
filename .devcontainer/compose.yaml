@@ -1,6 +1,10 @@
 services:
   tm:
-    build: .
+    build:
+      context: .
+      args:
+        MACOS_SDK_URL: "${MACOS_SDK_URL:-}"
+        MACOS_SDK_FILE_PATH: "${MACOS_SDK_FILE_PATH:-}"
     volumes:
       - ..:/workspace:cacheds
     tty: true
