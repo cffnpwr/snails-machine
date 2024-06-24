@@ -1,6 +1,5 @@
-use std::{cell::RefCell, rc::Rc};
-
 use serde::Deserialize;
+use std::{cell::RefCell, rc::Rc};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -9,7 +8,24 @@ pub struct Stuck;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum Direction {
+    #[serde(
+        alias = "left",
+        alias = "L",
+        alias = "l",
+        alias = "<-",
+        alias = "<",
+        alias = "←"
+    )]
     Left,
+
+    #[serde(
+        alias = "right",
+        alias = "R",
+        alias = "r",
+        alias = "->",
+        alias = ">",
+        alias = "→"
+    )]
     Right,
 }
 
