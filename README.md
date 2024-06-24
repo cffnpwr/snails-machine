@@ -11,8 +11,26 @@
 
 ## Build
 
+### Native Build
+
 ```sh
 cargo build --release
+```
+
+### Cross Build
+
+#### 対応ターゲット
+
+- `x86_64-unknown-linux-gnu`
+- `aarch64-unknown-linux-gnu`
+- `x86_64-apple-darwin`
+- `aaarch64-apple-darwin`
+
+#### Build
+
+```sh
+rustup target add [TARGET]
+cargo build --release --target [TARGET]
 ```
 
 ## Usage

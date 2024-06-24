@@ -1,3 +1,5 @@
+#:schema ./schema.json
+
 initial_state = "q0"
 accept_states = ["q2"]
 blank = "_"
@@ -25,5 +27,4 @@ transitions = [
     { from = "q1", to = "q2", read = "7", write = "8", direction = "Left" },
     { from = "q1", to = "q2", read = "8", write = "9", direction = "Left" },
     { from = "q1", to = "q1", read = "9", write = "0", direction = "Left" },
-    
 ]

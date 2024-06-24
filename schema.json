@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cffnpwr/snails-machine",
+  "title": "Snails Machine Transitions Definition",
+  "description": "A JSON Schema for defining the transitions of a Snails Machine",
+  "type": "object",
+  "required": [
+    "initial_state",
+    "accept_states",
+    "blank",
+    "transitions"
+  ],
+  "properties": {
+    "initial_state": {
+      "type": "string",
+      "description": "Initial state of the turing machine"
+    },
+    "accept_states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Accept states of the turing machine"
+    },
+    "blank": {
+      "type": "string",
+      "description": "Blank tape symbol"
+    },
+    "transitions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Transition from"
+          },
+          "to": {
+            "type": "string",
+            "description": "Transition to"
+          },
+          "read": {
+            "type": "string",
+            "description": "Read tape symbol"
+          },
+          "write": {
+            "type": "string",
+            "description": "Write tape symbol"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "L",
+              "R",
+              "l",
+              "r",
+              "Right",
+              "Left",
+              "right",
+              "left",
+              "<-",
+              "->",
+              "<",
+              ">",
+              "←",
+              "→"
+            ],
+            "description": "Direction to move the tape head"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "read",
+          "write",
+          "direction"
+        ]
+      },
+      "description": "Transition functions"
+    }
+  }
+}
