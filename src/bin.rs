@@ -16,6 +16,10 @@ struct Args {
     #[arg(short = 'm', long = "monospace")]
     is_monospace: bool,
 
+    /// Whether to show tape separator (Show '|' between tape symbols)
+    #[arg(short = 's', long = "separator")]
+    show_separator: bool,
+
     /// Initial tape content
     tape: String,
 }
@@ -80,8 +84,10 @@ fn main() -> Result<()> {
 
     while let Some(_) = tm.next() {}
 
+    let separator = if args.show_separator { "|" } else { "" };
+    let tape_len = tm.tape.len();
     let offset = tm.start_ptr;
-    let mut max_tape_symbol_lens = vec![0; tm.tape.len()];
+    let mut max_tape_symbol_lens = vec![1; tm.tape.len()];
     for snapshot in &tm.snapshots {
         for (i, s) in snapshot.tape.iter().enumerate() {
             let i = i + (offset - snapshot.start_ptr);
@@ -91,37 +97,31 @@ fn main() -> Result<()> {
         }
     }
     let max_tape_symbol_len = *max_tape_symbol_lens.iter().max().unwrap_or(&1);
-    for snapshot in tm.snapshots {
-        let tape = snapshot
-            .tape
-            .into_iter()
-            .enumerate()
-            .map(|(i, s)| {
-                let i = i + (offset - snapshot.start_ptr);
-                let len = if args.is_monospace {
-                    max_tape_symbol_len
-                } else {
-                    max_tape_symbol_lens[i]
-                };
-                let s = if s == tm.blank { s.repeat(len) } else { s };
-                format!("{:<len$}", s)
-            })
-            .collect::<Vec<_>>();
-
-        let blank = if args.is_monospace {
-            tm.blank.repeat(max_tape_symbol_len)
+    let get_max_tape_symbol_len = |i: usize| {
+        if args.is_monospace {
+            max_tape_symbol_len
         } else {
-            tm.blank.clone()
-        };
-        let mut tmp = vec![blank.clone(); offset - snapshot.start_ptr];
-        tmp.extend(tape.clone());
-        tmp.extend(vec![blank.clone(); tm.tape.len() - tmp.len()]);
-        let mut tape = tmp;
-
-        let tape_ptr = snapshot.tape_ptr + (offset - snapshot.start_ptr);
-        let s = &tape[tape_ptr];
-        tape[tape_ptr] = s.reversed().green().to_string();
-        let tape = tape.join("");
+            max_tape_symbol_lens[i]
+        }
+    };
+    let blank = if args.is_monospace {
+        tm.blank.repeat(max_tape_symbol_len)
+    } else {
+        tm.blank.to_string()
+    };
+    for snapshot in tm.snapshots {
+        let tape = snapshot.tape;
+        let tape_ptr = snapshot.tape_ptr;
+        let start_ptr = snapshot.start_ptr;
+        let tape = build_tape_string(
+            tape,
+            tape_ptr,
+            offset - start_ptr,
+            &blank,
+            separator,
+            tape_len,
+            get_max_tape_symbol_len,
+        );
 
         println!(
             "{:>7}: [{}]: ({}, {}) -> ({}, {})",
@@ -134,26 +134,58 @@ fn main() -> Result<()> {
         );
     }
 
-    let mut tape = tm
-        .tape
+    let tape = tm.tape;
+    let tape_ptr = tm.tape_ptr;
+    let start_ptr = tm.start_ptr;
+    let tape = build_tape_string(
+        tape,
+        tape_ptr,
+        offset - start_ptr,
+        &blank,
+        separator,
+        tape_len,
+        get_max_tape_symbol_len,
+    );
+    println!("{:>7}: [{}]", tm.status.to_string(), tape);
+
+    Ok(())
+}
+
+fn build_tape_string(
+    tape: Vec<String>,
+    tape_ptr: usize,
+    offset: usize,
+    blank: &str,
+    separator: &str,
+    tape_len: usize,
+    get_max_tape_symbol_len: impl Fn(usize) -> usize,
+) -> String {
+    let tape = tape
         .into_iter()
         .enumerate()
         .map(|(i, s)| {
-            let i = i + (offset - tm.start_ptr);
-            let len = if args.is_monospace {
-                max_tape_symbol_len
+            let i = i + offset;
+            let len = get_max_tape_symbol_len(i);
+            let s = if s[..1] == blank[..1] {
+                s.repeat(len)
             } else {
-                max_tape_symbol_lens[i]
+                s
             };
-            let s = if s == tm.blank { s.repeat(len) } else { s };
             format!("{:<len$}", s)
         })
         .collect::<Vec<_>>();
-    let s = &tape[tm.tape_ptr];
-    tape[tm.tape_ptr] = s.reversed().green().to_string();
-    println!("{:>7}: [{}]", tm.status.to_string(), tape.join(""),);
 
-    Ok(())
+    let mut tmp = vec![blank.to_string(); offset];
+    tmp.extend(tape.clone());
+    tmp.extend(vec![blank.to_string(); tape_len - tmp.len()]);
+    let mut tape = tmp;
+
+    let tape_ptr = tape_ptr + offset;
+    let s = &tape[tape_ptr];
+    tape[tape_ptr] = s.reversed().green().to_string();
+    let tape = tape.join(separator);
+
+    tape
 }
 
 fn string_to_tape<'a>(s: &str, alphabet: impl Into<Vec<&'a str>>) -> Result<Vec<String>> {
