@@ -36,7 +36,7 @@ pub struct Snapshot {
 
 #[derive(Debug, Clone)]
 pub struct TuringMachine {
-    current_state: Rc<RefCell<State>>,
+    pub current_state: Rc<RefCell<State>>,
     accept_states: Vec<Rc<RefCell<State>>>,
     pub tape: Vec<String>,
     pub tape_ptr: usize,

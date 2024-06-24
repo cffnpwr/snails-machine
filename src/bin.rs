@@ -1,9 +1,16 @@
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use colored::Colorize;
+use console::Term;
+use log::info;
 use patricia_tree::PatriciaNode;
 use snails_machine::{Config, State, Transition, TuringMachine};
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    io::{stdout, Write as _},
+    rc::Rc,
+};
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -24,68 +31,29 @@ struct Args {
     #[arg(long = "snail")]
     is_snail_mode: bool,
 
+    /// Whether to show step-by-step execution
+    #[arg(short = 'S', long = "step-by-step")]
+    is_step_by_step: bool,
+
     /// Initial tape content
     tape: String,
 }
 
 fn main() -> Result<()> {
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
+
     let args = Args::parse();
-    let config = Config::read_from_file(args.machine_file_path)?;
-
-    let mut state_names = (config.transitions)
-        .iter()
-        .map(|t| [t.from.clone(), t.to.clone()])
-        .flatten()
-        .collect::<Vec<_>>();
-    state_names.sort();
-    state_names.dedup();
-    let states = state_names
-        .iter()
-        .map(|name| {
-            (
-                name.as_str(),
-                Rc::new(RefCell::new(State::new(name, vec![]))),
-            )
-        })
-        .collect::<HashMap<_, _>>();
-
-    for transition in &config.transitions {
-        let from = states.get(&transition.from.as_str()).unwrap();
-        let to = states.get(&transition.to.as_str()).unwrap();
-        from.borrow_mut().add_transition(Transition::new(
-            to,
-            transition.read.as_str(),
-            transition.write.as_str(),
-            transition.direction,
-        ));
-    }
-
-    let initial_state = states.get(&config.initial_state.as_str()).unwrap();
-    let accept_states = config
-        .accept_states
-        .into_iter()
-        .map(|name| states.get(name.as_str()).unwrap().clone())
-        .collect::<Vec<_>>();
-
-    let mut alphabet = config
-        .transitions
-        .iter()
-        .map(|t| [t.read.clone(), t.write.clone()])
-        .flatten()
-        .collect::<Vec<_>>();
-    alphabet.sort();
-    alphabet.dedup();
-
-    let mut tm = TuringMachine::new(
-        &initial_state,
-        accept_states.as_slice(),
-        &string_to_tape(
-            &args.tape,
-            alphabet.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
-        )?,
-        config.blank.as_str(),
+    info!("Monospace mode: {}", args.is_monospace);
+    info!("Show separator: {}", args.show_separator);
+    info!("Snail mode: {}", args.is_snail_mode);
+    info!("Step-by-step mode: {}", args.is_step_by_step);
+    info!(
+        "Loading Turing machine definition from \"{}\"...",
+        args.machine_file_path
     );
 
+    let config = Config::read_from_file(args.machine_file_path)?;
+    let mut tm = turing_machine_from_config(&config, args.tape)?;
     while let Some(_) = tm.next() {}
 
     let separator = if args.show_separator { "|" } else { "" };
@@ -113,8 +81,10 @@ fn main() -> Result<()> {
     } else {
         tm.blank.to_string()
     };
-    for snapshot in tm.snapshots {
-        let tape = snapshot.tape;
+
+    let term = Term::stdout();
+    for snapshot in &tm.snapshots {
+        let tape = (&snapshot.tape).clone();
         let tape_ptr = snapshot.tape_ptr;
         let start_ptr = snapshot.start_ptr;
         let tape = build_tape_string(
@@ -150,6 +120,16 @@ fn main() -> Result<()> {
                 snapshot.write,
             );
         }
+
+        if args.is_step_by_step {
+            while {
+                print!("Press Enter to continue...");
+                stdout().flush()?;
+                let key = term.read_key()?;
+                key != console::Key::Enter
+            } {}
+            term.clear_line()?;
+        }
     }
 
     let tape = tm.tape;
@@ -164,6 +144,7 @@ fn main() -> Result<()> {
         tape_len,
         get_max_tape_symbol_len,
     );
+    let status = tm.status.to_string();
     if args.is_snail_mode {
         let ptr = tape_ptr + offset - start_ptr;
         let blanks = (0..ptr)
@@ -172,12 +153,69 @@ fn main() -> Result<()> {
             })
             .collect::<String>();
         println!("[{}]", tape);
-        println!(" {blanks}🐌<[{}]", tm.status.to_string())
+        println!(" {blanks}🐌<[{}]", status)
     } else {
-        println!("{:>7}: [{}]", tm.status.to_string(), tape);
+        println!("{:>7}: [{}]", status, tape);
     }
 
     Ok(())
+}
+
+fn turing_machine_from_config(config: &Config, tape: String) -> Result<TuringMachine> {
+    let mut state_names = (config.transitions)
+        .iter()
+        .map(|t| [t.from.clone(), t.to.clone()])
+        .flatten()
+        .collect::<Vec<_>>();
+    state_names.sort();
+    state_names.dedup();
+    let states = state_names
+        .iter()
+        .map(|name| {
+            (
+                name.as_str(),
+                Rc::new(RefCell::new(State::new(name, vec![]))),
+            )
+        })
+        .collect::<HashMap<_, _>>();
+
+    for transition in &config.transitions {
+        let from = states.get(&transition.from.as_str()).unwrap();
+        let to = states.get(&transition.to.as_str()).unwrap();
+        from.borrow_mut().add_transition(Transition::new(
+            to,
+            transition.read.as_str(),
+            transition.write.as_str(),
+            transition.direction,
+        ));
+    }
+
+    let initial_state = states.get(&config.initial_state.as_str()).unwrap();
+    let accept_states = (&config.accept_states)
+        .into_iter()
+        .map(|name| states.get(name.as_str()).unwrap().clone())
+        .collect::<Vec<_>>();
+
+    let mut alphabet = config
+        .transitions
+        .iter()
+        .map(|t| [t.read.clone(), t.write.clone()])
+        .flatten()
+        .collect::<Vec<_>>();
+    alphabet.sort();
+    alphabet.dedup();
+
+    let tm = TuringMachine::new(
+        &initial_state,
+        accept_states.as_slice(),
+        &string_to_tape(
+            &tape,
+            alphabet.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
+        )?,
+        config.blank.as_str(),
+    );
+
+    Ok(tm)
 }
 
 fn build_tape_string(

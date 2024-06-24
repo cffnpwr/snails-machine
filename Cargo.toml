@@ -15,6 +15,9 @@ path = "src/bin.rs"
 anyhow = "1.0.86"
 clap = { version = "4.5.7", features = ["derive"] }
 colored = "2.1.0"
+console = "0.15.8"
+env_logger = "0.11.3"
+log = "0.4.21"
 patricia-tree = { version = "0.1.0", path = "patricia-tree" }
 serde = { version = "1.0.203", features = ["derive"] }
 serde_derive = "1.0.203"

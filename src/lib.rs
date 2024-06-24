@@ -6,4 +6,4 @@ mod turing_machine;
 pub use builder::TuringMachineBuilder;
 pub use config::Config;
 pub use state::{Direction, State, Transition};
-pub use turing_machine::TuringMachine;
+pub use turing_machine::{Status, TuringMachine};
