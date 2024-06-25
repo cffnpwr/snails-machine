@@ -61,9 +61,9 @@ jobs:
 
       - name: Build osxcross
         run: |
-          git clone https://github.com/tpoechtrager/osxcross.git /osxcross
+          git clone https://github.com/tpoechtrager/osxcross.git ~/osxcross
           pushd ~/osxcross
-          curl -fOL --output-dir /osxcross/tarballs/ ${{ vars.MACOS_SDK_URL }}
+          curl -fOL --output-dir ~/osxcross/tarballs/ ${{ vars.MACOS_SDK_URL }}
           UNATTENDED=1 ./build.sh
           sudo cp -r ~/osxcross/target/* /usr/local/
           sudo ldconfig
