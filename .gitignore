@@ -8,3 +8,5 @@
 !/machine.toml
 !/Makefile.toml
 !/schema.json
+
+.env

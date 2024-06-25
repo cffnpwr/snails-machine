@@ -40,7 +40,7 @@ COPY ./${MACOS_SDK_FILE_PATH}* /osxcross/tarballs/
 WORKDIR /osxcross
 
 RUN mkdir -p /osxcross/target/bin
-RUN if [ -n "${MACOS_SDK_URL}" ] || [ -n "${MACOS_SDK_FILE_PATH}" ] && [ "${MACOS_SDK_FILE_PATH}" != "dummy" ]; \
+RUN if [ -n "${MACOS_SDK_URL}" ] || ( [ -n "${MACOS_SDK_FILE_PATH}" ] && [ "${MACOS_SDK_FILE_PATH}" != "dummy" ] ); \
         then UNATTENDED=1 ./build.sh; \
     fi
 
@@ -49,6 +49,7 @@ FROM mcr.microsoft.com/devcontainers/rust:1-1-bookworm as runner
 
 ARG MACOS_SDK_URL
 ARG MACOS_SDK_FILE_PATH="dummy"
+ARG ENABLE_WINDOWS_TARGET="false"
 
 RUN apt-get update -qq; \
     apt-get install -qq --no-install-recommends \
@@ -56,14 +57,25 @@ RUN apt-get update -qq; \
     iputils-ping \
     crossbuild-essential-arm64 \
     crossbuild-essential-amd64; \
+    g++-mingw-w64; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \
     rustup target add aarch64-unknown-linux-gnu; \
+    rustup target add aarch64-unknown-linux-musl; \
     rustup target add x86_64-unknown-linux-gnu; \
-    if [ -n "${MACOS_SDK_URL}" ] || [ -n "${MACOS_SDK_FILE_PATH}" ] && [ "${MACOS_SDK_FILE_PATH}" != "dummy" ]; then \
+    rustup target add x86_64-unknown-linux-musl; \
+    if [ "${ENABLE_WINDOWS_TARGET}" ]; then \
+        rustup target add aarch64-pc-windows-msvc; \
+        rustup target add x86_64-pc-windows-gnu; \
+        rustup target add x86_64-pc-windows-msvc; \
+        cargo install xwin; \
+        xwin --accept-license --cache-dir /.xwin-cache --arch=x86_64,aarch64 splat --output /.xwin; \
+    fi; \
+    if [ -n "${MACOS_SDK_URL}" ] || ( [ -n "${MACOS_SDK_FILE_PATH}" ] && [ "${MACOS_SDK_FILE_PATH}" != "dummy" ] ); then \
         rustup target add x86_64-apple-darwin; \
         rustup target add aarch64-apple-darwin; \
-    fi
+    fi; \
+    chmod a+w -R /usr/local/cargo/registry
 
 COPY ./cargo-config.toml /.cargo/config.toml
 COPY --from=mold /mold/ /usr/local/
