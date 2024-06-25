@@ -1,0 +1,79 @@
+name: Build for Windows with MSVC
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: false
+        type: string
+
+jobs:
+  windows-msvc:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, aarch64]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: target
+        run: echo "target=${{ matrix.arch }}-pc-windows-msvc" >> $GITHUB_OUTPUT
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.xwin-cache
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./target/
+          key: ${{ steps.target.outputs.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ steps.target.outputs.target }}-
+
+      - name: Setup rust
+        run: |
+          rustup install nightly
+          rustup default nightly
+          rustup target add ${{ steps.target.outputs.target }}
+
+      - name: Setup cross compiler
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq --no-install-recommends \
+            clang \
+            lld
+          cargo install xwin
+          sudo mkdir -p /.xwin
+          sudo chmod -R 777 /.xwin
+          xwin --accept-license --cache-dir ~/.xwin-cache --arch=${{ matrix.arch }} splat --output /.xwin
+
+      - name: Move config
+        run: |
+          mkdir -p .cargo
+          cp .devcontainer/cargo-config.toml .cargo/config.toml
+
+      - name: Build
+        run: |
+          cargo build --release --target ${{ steps.target.outputs.target }}
+
+      - id: date
+        env: 
+          TZ: "Asia/Tokyo"
+        run: echo "date=unstable-$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
+    
+      - name: zip archive
+        id: zip
+        run: |
+          FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}.tar.gz
+          zip -r ${FILENAME} target/${{ steps.target.outputs.target }}/release/snails-machine.exe
+          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+
+      - name: Save artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}
+          path: ./${{ steps.zip.outputs.filename }}

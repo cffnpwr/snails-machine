@@ -9,7 +9,8 @@
         "Swellaby.rust-pack",
         "EditorConfig.EditorConfig",
         "GitHub.copilot",
-        "dustypomerleau.rust-syntax"
+        "dustypomerleau.rust-syntax",
+        "github.vscode-github-actions"
       ]
     }
   }

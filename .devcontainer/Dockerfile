@@ -56,7 +56,7 @@ RUN apt-get update -qq; \
     clang \
     iputils-ping \
     crossbuild-essential-arm64 \
-    crossbuild-essential-amd64; \
+    crossbuild-essential-amd64 \
     g++-mingw-w64; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*; \

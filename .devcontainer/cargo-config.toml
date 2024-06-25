@@ -20,16 +20,10 @@ rustflags = [
 linker = "oa64-clang"
 
 [target.x86_64-pc-windows-gnu]
-linker = "clang"
-rustflags = [
-  "-C",
-  "link-arg=-fuse-ld=mold",
-  "-C",
-  "link-args=-target x86_64-pc-windows-gnu",
-]
+linker = "x86_64-w64-mingw32-gcc"
 
 [target.x86_64-pc-windows-msvc]
-linker = "lld-link"
+linker = "rust-lld"
 rustflags = [
   "-C",
   "linker-flavor=lld-link",
@@ -39,7 +33,7 @@ rustflags = [
 ]
 
 [target.aarch64-pc-windows-msvc]
-linker = "lld-link"
+linker = "rust-lld"
 rustflags = [
   "-C",
   "linker-flavor=lld-link",

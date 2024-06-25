@@ -1,0 +1,80 @@
+name: Build for Linux
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: false
+        type: string
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, aarch64]
+        abi: [gnu, musl]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - id: target
+        run: echo "target=${{ matrix.arch }}-unknown-linux-${{ matrix.abi }}" >> $GITHUB_OUTPUT
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./target/
+          key: ${{ steps.target.outputs.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ steps.target.outputs.target }}-
+
+      - name: Setup rust
+        run: |
+          rustup install nightly
+          rustup default nightly
+          rustup target add ${{ steps.target.outputs.target }}
+
+      - name: Setup cross compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq --no-install-recommends \
+            clang \
+            crossbuild-essential-amd64 \
+            crossbuild-essential-arm64
+
+      - name: Setup mold
+        uses: rui314/setup-mold@v1
+        with:
+          make-default: false
+
+      - name: Move config
+        run: |
+          mkdir -p .cargo
+          cp .devcontainer/cargo-config.toml .cargo/config.toml
+
+      - name: Build
+        run: |
+          cargo build --release --target ${{ steps.target.outputs.target }}
+
+      - id: date
+        env: 
+          TZ: "Asia/Tokyo"
+        run: echo "date=unstable-$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: tar archive
+        id: tar
+        run: |
+          FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}.tar.gz
+          tar czf ${FILENAME} target/${{ steps.target.outputs.target }}/release/snails-machine
+          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+
+      - name: Save artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}
+          path: ./${{ steps.tar.outputs.filename }}
