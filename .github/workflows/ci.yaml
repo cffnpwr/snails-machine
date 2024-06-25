@@ -43,5 +43,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build
-        uses: ./.github/workflows/build-${{ matrix.build-target }}.yaml
+      - name: Build linux
+        if: matrix.build-target == 'linux'
+        uses: ./.github/workflows/build-linux.yaml
+
+      - name: Build macos
+        if: matrix.build-target == 'macos'
+        uses: ./.github/workflows/build-macos.yaml
+
+      - name: Build windows-gnu
+        if: matrix.build-target == 'win-gnu'
+        uses: ./.github/workflows/build-windows-gnu.yaml
+
+      - name: Build windows-msvc
+        if: matrix.build-target == 'win-msvc'
+        uses: ./.github/workflows/build-windows-msvc.yaml
