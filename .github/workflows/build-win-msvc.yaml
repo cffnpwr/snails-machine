@@ -46,7 +46,7 @@ jobs:
           sudo apt-get install -qq --no-install-recommends \
             clang \
             lld
-          cargo install xwin
+          which xwin || cargo install xwin
           sudo mkdir -p /.xwin
           sudo chmod -R 777 /.xwin
           xwin --accept-license --cache-dir ~/.xwin-cache --arch=${{ matrix.arch }} splat --output /.xwin
