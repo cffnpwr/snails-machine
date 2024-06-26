@@ -64,7 +64,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir -p ~/osxcross
-          pushd ~/osxcross
+          cd ~/osxcross
           git fetch
           echo "status=$?" >> $GITHUB_OUTPUT
 
@@ -75,6 +75,7 @@ jobs:
       - name: Build osxcross
         continue-on-error: true
         run: |
+          cd ~/osxcross
           if [ $(git diff origin/master | wc -l) -ne 0 ]; then
             git clone https://github.com/tpoechtrager/osxcross.git .
             curl -fOL --output-dir ~/osxcross/tarballs/ ${{ vars.MACOS_SDK_URL }}
@@ -82,7 +83,6 @@ jobs:
             sudo cp -r ~/osxcross/target/* /usr/local/
             sudo ldconfig
           fi
-          popd
 
       - name: Move config
         run: |
