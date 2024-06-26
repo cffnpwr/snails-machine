@@ -64,7 +64,7 @@ jobs:
       - name: zip archive
         id: zip
         run: |
-          FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}.tar.gz
+          FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}.zip
           zip -r -j ${FILENAME} target/${{ steps.target.outputs.target }}/release/snails-machine.exe
           echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
 
