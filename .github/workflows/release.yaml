@@ -4,19 +4,74 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    types: [opened, reopened, synchronize]
-
-permissions:
-  contents: read
+    tags: 
+      - v*
 
 jobs:
-  update_release_draft:
-    permissions:
-      contents: write
-      pull-requests: write
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          echo "version=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")" >> $GITHUB_OUTPUT
+
+  build-linux:
+    needs: 
+      - version
+    uses: ./.github/workflows/build-linux.yaml
+    with:
+      version: ${{ needs.version.outputs.version }}
+  
+  build-windows-msvc:
+    needs: 
+      - version
+    uses: ./.github/workflows/build-win-msvc.yaml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  build-windows-gnu:
+    needs: 
+      - version
+    uses: ./.github/workflows/build-win-gnu.yaml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  build-macos:
+    needs: 
+      - version
+    uses: ./.github/workflows/build-macos.yaml
+    with:
+      version: ${{ needs.version.outputs.version }}
+
+  attach-artifacts:
+    needs: 
+      - version
+      - build-linux
+      - build-windows-msvc
+      - build-windows-gnu
+      - build-macos
     runs-on: ubuntu-latest
     steps:
-      - uses: release-drafter/release-drafter@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: ${{ needs.version.outputs.version }}-*
+          merge-multiple: true
+
+      - name: Attach artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          tag_name: ${{ needs.version.outputs.version }}
+          generate_release_notes: true
+          draft: true
