@@ -70,7 +70,7 @@ jobs:
         id: tar
         run: |
           FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}.tar.gz
-          tar czf ${FILENAME} target/${{ steps.target.outputs.target }}/release/snails-machine
+          tar czf ${FILENAME} -C target/${{ steps.target.outputs.target }}/release snails-machine
           echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
 
       - name: Save artifact

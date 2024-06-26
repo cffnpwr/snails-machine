@@ -65,7 +65,7 @@ jobs:
         id: zip
         run: |
           FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ steps.target.outputs.target }}.tar.gz
-          zip -r ${FILENAME} target/${{ steps.target.outputs.target }}/release/snails-machine.exe
+          zip -r ${FILENAME} -C target/${{ steps.target.outputs.target }}/release snails-machine.exe
           echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
 
       - name: Save artifact
