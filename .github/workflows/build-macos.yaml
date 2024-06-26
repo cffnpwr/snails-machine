@@ -80,9 +80,9 @@ jobs:
             git clone https://github.com/tpoechtrager/osxcross.git .
             curl -fOL --output-dir ~/osxcross/tarballs/ ${{ vars.MACOS_SDK_URL }}
             UNATTENDED=1 ./build.sh
-            sudo cp -r ~/osxcross/target/* /usr/local/
-            sudo ldconfig
           fi
+          sudo cp -r ~/osxcross/target/* /usr/local/
+          sudo ldconfig
 
       - name: Move config
         run: |
