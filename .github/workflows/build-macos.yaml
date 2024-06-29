@@ -70,14 +70,14 @@ jobs:
 
       - name: Download osxcross
         if: ${{ steps.osxcross.outputs.status != 0 }}
-        run: git clone https://github.com/tpoechtrager/osxcross.git .
+        run: git clone https://github.com/tpoechtrager/osxcross.git ~/osxcross
 
       - name: Build osxcross
         continue-on-error: true
         run: |
           cd ~/osxcross
           if [ $(git diff origin/master | wc -l) -ne 0 ]; then
-            git clone https://github.com/tpoechtrager/osxcross.git .
+            git pull
             curl -fOL --output-dir ~/osxcross/tarballs/ ${{ vars.MACOS_SDK_URL }}
             UNATTENDED=1 ./build.sh
           fi
