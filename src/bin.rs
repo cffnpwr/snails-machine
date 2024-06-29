@@ -123,6 +123,7 @@ fn main() -> Result<()> {
 
         if args.is_step_by_step {
             while {
+                term.clear_line()?;
                 print!("Press Enter to continue...");
                 stdout().flush()?;
                 let key = term.read_key()?;
@@ -193,7 +194,27 @@ fn turing_machine_from_config(config: &Config, tape: String) -> Result<TuringMac
     let initial_state = states.get(&config.initial_state.as_str()).unwrap();
     let accept_states = (&config.accept_states)
         .into_iter()
-        .map(|name| states.get(name.as_str()).unwrap().clone())
+        .map(|name| states.get(name.as_str()))
+        .collect::<Vec<_>>();
+    if accept_states.iter().any(|s| s.is_none()) {
+        return Err(anyhow!(
+            "Invalid accept state: {}. Accept state must be one of {}.",
+            config
+                .accept_states
+                .iter()
+                .map(|s| format!("\"{}\"", s))
+                .collect::<Vec<String>>()
+                .join(", "),
+            state_names
+                .iter()
+                .map(|s| format!("\"{}\"", s))
+                .collect::<Vec<String>>()
+                .join(", ")
+        ));
+    }
+    let accept_states = accept_states
+        .into_iter()
+        .map(|s| s.unwrap().clone())
         .collect::<Vec<_>>();
 
     let mut alphabet = config
