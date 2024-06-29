@@ -2,8 +2,6 @@ name: Release Drafter
 
 on:
   push:
-    branches:
-      - main
     tags: 
       - v*
 
@@ -15,11 +13,25 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      
+      - name: Check tagged branch
+        run: |
+          BRANCHS=$(git branch --contains ${{ github.ref_name }})
+          set -- $BRANCHS
+          for BRANCH in $BRANCHS ; do
+            if [[ "$BRANCH" == "main" ]]; then
+              exit 0
+            fi
+          done
+          exit 1
 
       - name: Get version
         id: version
         run: |
-          echo "version=$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")" >> $GITHUB_OUTPUT
+          echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
 
   build-linux:
     needs: 
