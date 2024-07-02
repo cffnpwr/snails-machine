@@ -14,31 +14,23 @@ jobs:
         job:
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
-            extension: ""
           - runner: ubuntu-24.04
             target: x86_64-unknown-linux-musl
-            extension: ""
           - runner: ubuntu-24.04
             target: aarch64-unknown-linux-gnu
-            extension: ""
           - runner: ubuntu-24.04
             target: aarch64-unknown-linux-musl
-            extension: ""
           - runner: windows-2022
             target: x86_64-pc-windows-msvc
-            extension: ".exe"
           - runner: windows-2022
             target: x86_64-pc-windows-gnu
-            extension: ".exe"
           - runner: windows-2022
             target: aarch64-pc-windows-msvc
-            extension: ".exe"
           - runner: macos-13
             target: x86_64-apple-darwin
-            extension: ""
           - runner: macos-14
             target: aarch64-apple-darwin
-            extension: ""
+            
     runs-on: ${{ matrix.job.runner }}
     steps:
       - name: Checkout
@@ -135,16 +127,33 @@ jobs:
 
       - name: tar archive
         id: tar
+        if: ${{ !contains(matrix.job.target, 'windows') }}
         run: |
           FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.tar.gz
-          tar czf ${FILENAME} -C target/${{ matrix.job.target }}/release snails-machine${{ matrix.job.extension }}
+          tar czf ${FILENAME} -C target/${{ matrix.job.target }}/release snails-machine
           echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+      
+      - name: zip archive
+        id: zip
+        if: contains(matrix.job.target, 'windows')
+        run: |
+          $env:FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.zip
+          Compress-Archive -Path .\\target\\${{ matrix.job.target }}\\release\\snails-machine.exe -DestinationPath $env:FILENAME
+          echo "filename=${FILENAME}" >> $env:GITHUB_OUTPUT
 
-      - name: Save artifact
+      - name: Save tar artifact
+        if: ${{ !contains(matrix.job.target, 'windows') }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}
           path: ./${{ steps.tar.outputs.filename }}
+      
+      - name: Save zip artifact
+        if: contains(matrix.job.target, 'windows')
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}
+          path: ./${{ steps.zip.outputs.filename }}
 
 
         
