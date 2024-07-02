@@ -92,24 +92,26 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.job.target }}
 
-      - name: tar archive
+      - name: archive
         id: archive
         shell: bash
         run: |
           if "${{ startsWith(matrix.job.runner, 'windows') }}"; then
             FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
+
             7z a ${FILENAME} ./target/${{ matrix.job.target }}/release/snails-machine.exe
           else
             FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.tar.gz"
+
             if "${{ startsWith(matrix.job.runner, 'macos') }}"; then
               gtar czf ${FILENAME} -C ./target/${{ matrix.job.target }}/release ./snails-machine
             else
               tar czf ${FILENAME} -C ./target/${{ matrix.job.target }}/release ./snails-machine
             fi
           fi
-          echo "filename=${FILENAME}" >> GITHUB_OUTPUT
+          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
 
-      - name: Save tar artifact
+      - name: Save artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version }}-${{ matrix.job.target }}
