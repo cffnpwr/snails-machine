@@ -73,6 +73,7 @@ jobs:
         uses: rui314/setup-mold@v1
       
       - name: Set cargo config
+        if: contains(matrix.job.target, 'linux')
         run: |
           mkdir -p .cargo
           cat <<EOF > .cargo/config.toml
