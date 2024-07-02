@@ -88,10 +88,11 @@ jobs:
           ]
           EOF
 
-      - name: Install GNU toolchain
+      - name: Setup mingw
         if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'gnu')
-        run: |
-          choco install mingw
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
 
       - name: Setup MSVC compiler
         if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc') && contains(matrix.job.target, 'aarch64')
@@ -112,16 +113,17 @@ jobs:
         id: tar
         if: ${{ !contains(matrix.job.target, 'windows') }}
         run: |
-          FILENAME=snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.tar.gz
+          FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.tar.gz"
           tar czf ${FILENAME} -C target/${{ matrix.job.target }}/release snails-machine
           echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
       
       - name: zip archive
         id: zip
         if: contains(matrix.job.target, 'windows')
+        shell: bash
         run: |
-          $env:FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
-          Compress-Archive .\\target\\${{ matrix.job.target }}\\release\\snails-machine.exe $env:FILENAME
+          FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
+          zip -r -j target/${{ matrix.job.target }}/release/nails-machine.exe FILENAME
           echo "filename=${FILENAME}" >> $env:GITHUB_OUTPUT
 
       - name: Save tar artifact
