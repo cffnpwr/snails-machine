@@ -137,7 +137,7 @@ jobs:
         id: zip
         if: contains(matrix.job.target, 'windows')
         run: |
-          $env:FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.zip
+          $env:FILENAME="snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.zip"
           Compress-Archive -Path .\\target\\${{ matrix.job.target }}\\release\\snails-machine.exe -DestinationPath $env:FILENAME
           echo "filename=${FILENAME}" >> $env:GITHUB_OUTPUT
 
