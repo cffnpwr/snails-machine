@@ -94,28 +94,16 @@ jobs:
           choco install mingw
 
       - name: Setup MSVC compiler
-        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
-        run: choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional"
-
-      - name: Setup cross compiler for x86_64 Windows
-        if: startsWith(matrix.job.target, 'x86_64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
-        run: choco install visualstudio2022-workload-vctools --package-parameters "--add Microsoft.VisualStudio.Component.VC.14.29.16.16.x86.x64"
-
-      - name: Setup cross compiler for aarch64 Windows
-        if: startsWith(matrix.job.target, 'aarch64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
-        run: choco install visualstudio2022-workload-vctools --package-parameters "--add Microsoft.VisualStudio.Component.VC.14.29.16.16.x86.x64.arm.arm64"
-
-      - name: Add MSVC to PATH
-        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
-        run: echo "::add-path::C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build"
+        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc') && contains(matrix.job.target, 'aarch64')
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+        with:
+          arch: amd64_arm64
       
-      - name: Add MSVC to PATH for x86_64 Windows
-        if: startsWith(matrix.job.target, 'x86_64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
-        run: echo "::add-path::C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.29.30037\\bin\\Hostx64\\x64"
-      
-      - name: Add MSVC to PATH for aarch64 Windows
-        if: startsWith(matrix.job.target, 'aarch64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
-        run: echo "::add-path::C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.29.30037\\bin\\Hostx64\\arm64"
+      - name: Setup MSVC compiler
+        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc') && contains(matrix.job.target, 'x86_64')
+        uses: ilammy/msvc-dev-cmd@v1.13.0
+        with:
+          arch: x64
 
       - name: Build
         run: cargo build --release --target ${{ matrix.job.target }}
