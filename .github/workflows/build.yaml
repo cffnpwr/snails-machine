@@ -74,7 +74,8 @@ jobs:
       
       - name: Set cargo config
         run: |
-          cat <<EOF > .cargo/config
+          mkdir -p .cargo
+          cat <<EOF > .cargo/config.toml
           [target.'cfg(all(target_arch = "x86_64", target_os = "linux"))']
           linker = "clang"
           rustflags = [
