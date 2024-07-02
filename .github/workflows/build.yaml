@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       version:
-        required: false
+        required: true
         type: string
 
 jobs:
@@ -108,16 +108,11 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.job.target }}
 
-      - id: date
-        env: 
-          TZ: "Asia/Tokyo"
-        run: echo "date=unstable-$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
-
       - name: tar archive
         id: tar
         if: ${{ !contains(matrix.job.target, 'windows') }}
         run: |
-          FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.tar.gz
+          FILENAME=snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.tar.gz
           tar czf ${FILENAME} -C target/${{ matrix.job.target }}/release snails-machine
           echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
       
@@ -125,22 +120,22 @@ jobs:
         id: zip
         if: contains(matrix.job.target, 'windows')
         run: |
-          $env:FILENAME="snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.zip"
-          Compress-Archive -Path .\\target\\${{ matrix.job.target }}\\release\\snails-machine.exe -DestinationPath $env:FILENAME
+          $env:FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
+          Compress-Archive .\\target\\${{ matrix.job.target }}\\release\\snails-machine.exe $env:FILENAME
           echo "filename=${FILENAME}" >> $env:GITHUB_OUTPUT
 
       - name: Save tar artifact
         if: ${{ !contains(matrix.job.target, 'windows') }}
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}
+          name: ${{ inputs.version }}-${{ matrix.job.target }}
           path: ./${{ steps.tar.outputs.filename }}
       
       - name: Save zip artifact
         if: contains(matrix.job.target, 'windows')
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}
+          name: ${{ inputs.version }}-${{ matrix.job.target }}
           path: ./${{ steps.zip.outputs.filename }}
 
 

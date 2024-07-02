@@ -36,6 +36,19 @@ jobs:
 
       - name: Run Test
         run: cargo test
+    
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.date.outputs.date }}
+    steps:
+      - id: date
+        env: 
+          TZ: "Asia/Tokyo"
+        run: echo "date=unstable-$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
 
   unstable-build:
+    needs: version
     uses: ./.github/workflows/build.yaml
+    with:
+      version: ${{ needs.version.outputs.version }}
