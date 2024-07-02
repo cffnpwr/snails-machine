@@ -120,10 +120,10 @@ jobs:
       - name: zip archive
         id: zip
         if: contains(matrix.job.target, 'windows')
-        shell: bash
+        shell: pwsh
         run: |
-          FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
-          zip -r -j target/${{ matrix.job.target }}/release/nails-machine.exe FILENAME
+          $env:FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
+          Compress-Archive -Path .\\target\\${{ matrix.job.target }}\\release\\snails-machine.exe -DestinationPath FILENAME
           echo "filename=${FILENAME}" >> $env:GITHUB_OUTPUT
 
       - name: Save tar artifact
