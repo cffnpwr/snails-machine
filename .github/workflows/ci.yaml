@@ -37,14 +37,5 @@ jobs:
       - name: Run Test
         run: cargo test
 
-  build-linux:
-    uses: ./.github/workflows/build-linux.yaml
-  
-  build-windows-msvc:
-    uses: ./.github/workflows/build-win-msvc.yaml
-
-  build-windows-gnu:
-    uses: ./.github/workflows/build-win-gnu.yaml
-
-  build-macos:
-    uses: ./.github/workflows/build-macos.yaml
+  unstable-build:
+    uses: ./.github/workflows/build.yaml

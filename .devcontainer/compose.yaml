@@ -8,5 +8,8 @@ services:
         ENABLE_WINDOWS_TARGET: ${ENABLE_WINDOWS_TARGET:-false}
     volumes:
       - ..:/workspace:cacheds
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
     tty: true
     init: true

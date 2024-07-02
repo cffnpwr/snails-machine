@@ -1,0 +1,124 @@
+name: build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: false
+        type: string
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        job:
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            extension: ""
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-musl
+            extension: ""
+          - runner: ubuntu-24.04
+            target: aarch64-unknown-linux-gnu
+            extension: ""
+          - runner: ubuntu-24.04
+            target: aarch64-unknown-linux-musl
+            extension: ""
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            extension: ".exe"
+          - runner: windows-2022
+            target: x86_64-pc-windows-gnu
+            extension: ".exe"
+          - runner: windows-2022
+            target: aarch64-pc-windows-msvc
+            extension: ".exe"
+          - runner: macos-13
+            target: x86_64-apple-darwin
+            extension: ""
+          - runner: macos-14
+            target: aarch64-apple-darwin
+            extension: ""
+    runs-on: ${{ matrix.job.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./target/
+          key: ${{ matrix.job.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ matrix.job.target }}-
+
+      - name: Setup rust
+        run: rustup target add ${{ matrix.job.target }}
+
+      - name: Setup mold linker
+        uses: rui314/setup-mold@v1
+
+      - name: Setup cross compiler for Linux
+        if: startsWith(matrix.job.target, 'aarch64') && contains(matrix.job.target, 'linux')
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq --no-install-recommends \
+            clang \
+            crossbuild-essential-arm64
+
+      - name: Install GNU toolchain
+        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'gnu')
+        run: |
+          choco install mingw
+
+      - name: Setup MSVC compiler
+        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
+        run: choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --includeOptional"
+
+      - name: Setup cross compiler for x86_64 Windows
+        if: startsWith(matrix.job.target, 'x86_64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
+        run: choco install visualstudio2022-workload-vctools --package-parameters "--add Microsoft.VisualStudio.Component.VC.14.29.16.16.x86.x64"
+
+      - name: Setup cross compiler for aarch64 Windows
+        if: startsWith(matrix.job.target, 'aarch64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
+        run: choco install visualstudio2022-workload-vctools --package-parameters "--add Microsoft.VisualStudio.Component.VC.14.29.16.16.x86.x64.arm.arm64"
+
+      - name: Add MSVC to PATH
+        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
+        run: echo "::add-path::C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build"
+      
+      - name: Add MSVC to PATH for x86_64 Windows
+        if: startsWith(matrix.job.target, 'x86_64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
+        run: echo "::add-path::C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.29.30037\\bin\\Hostx64\\x64"
+      
+      - name: Add MSVC to PATH for aarch64 Windows
+        if: startsWith(matrix.job.target, 'aarch64') && contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc')
+        run: echo "::add-path::C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.29.30037\\bin\\Hostx64\\arm64"
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.job.target }}
+
+      - id: date
+        env: 
+          TZ: "Asia/Tokyo"
+        run: echo "date=unstable-$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: tar archive
+        id: tar
+        run: |
+          FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.tar.gz
+          tar czf ${FILENAME} -C target/release snails-machine${{ matrix.job.extension }}
+          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
+
+      - name: Save artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}
+          path: ./${{ steps.tar.outputs.filename }}
+
+
+        
