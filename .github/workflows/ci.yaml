@@ -12,7 +12,14 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        runner:
+          - ubuntu-24.04
+          - windows-2022
+          - macos-13
+          - macos-14
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,25 +33,24 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ./target/
-          key: test-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: test-
-
-      - name: Setup rust
-        run: |
-          rustup install nightly
-          rustup default nightly
+          key: test-${{ matrix.runner }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: test-${{ matrix.runner }}-
 
       - name: Run Test
         run: cargo test
+    
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.date.outputs.date }}
+    steps:
+      - id: date
+        env: 
+          TZ: "Asia/Tokyo"
+        run: echo "date=unstable-$(date -u +'%Y%m%d')" >> $GITHUB_OUTPUT
 
-  build-linux:
-    uses: ./.github/workflows/build-linux.yaml
-  
-  build-windows-msvc:
-    uses: ./.github/workflows/build-win-msvc.yaml
-
-  build-windows-gnu:
-    uses: ./.github/workflows/build-win-gnu.yaml
-
-  build-macos:
-    uses: ./.github/workflows/build-macos.yaml
+  unstable-build:
+    needs: version
+    uses: ./.github/workflows/build.yaml
+    with:
+      version: ${{ needs.version.outputs.version }}
