@@ -88,57 +88,49 @@ jobs:
           ]
           EOF
 
-      - name: Setup mingw
-        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'gnu')
-        uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
+      # - name: Setup mingw
+      #   if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'gnu')
+      #   uses: egor-tensin/setup-mingw@v2
+      #   with:
+      #     platform: x64
 
-      - name: Setup MSVC compiler
-        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc') && contains(matrix.job.target, 'aarch64')
-        uses: ilammy/msvc-dev-cmd@v1.13.0
-        with:
-          arch: amd64_arm64
+      # - name: Setup MSVC compiler
+      #   if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc') && contains(matrix.job.target, 'aarch64')
+      #   uses: ilammy/msvc-dev-cmd@v1.13.0
+      #   with:
+      #     arch: amd64_arm64
       
-      - name: Setup MSVC compiler
-        if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc') && contains(matrix.job.target, 'x86_64')
-        uses: ilammy/msvc-dev-cmd@v1.13.0
-        with:
-          arch: x64
+      # - name: Setup MSVC compiler
+      #   if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'msvc') && contains(matrix.job.target, 'x86_64')
+      #   uses: ilammy/msvc-dev-cmd@v1.13.0
+      #   with:
+      #     arch: x64
 
       - name: Build
         run: cargo build --release --target ${{ matrix.job.target }}
 
       - name: tar archive
-        id: tar
-        if: ${{ !contains(matrix.job.target, 'windows') }}
+        id: archive
+        shell: bash
         run: |
-          FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.tar.gz"
-          tar czf ${FILENAME} -C target/${{ matrix.job.target }}/release snails-machine
-          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
-      
-      - name: zip archive
-        id: zip
-        if: contains(matrix.job.target, 'windows')
-        shell: pwsh
-        run: |
-          $env:FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
-          Compress-Archive -Path .\\target\\${{ matrix.job.target }}\\release\\snails-machine.exe -DestinationPath FILENAME
-          echo "filename=${FILENAME}" >> $env:GITHUB_OUTPUT
+          if "${{ startsWith(matrix.job.runner, 'windows') }}"; then
+            FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.zip"
+            7z a ${FILENAME} -w./target/${{ matrix.job.target }}/release ./snails-machine.exe
+          else
+            FILENAME="snails-machine-${{ inputs.version }}-${{ matrix.job.target }}.tar.gz"
+            if "${{ startsWith(matrix.job.runner, 'macos') }}"; then
+              gtar czf ${FILENAME} -C ./target/${{ matrix.job.target }}/release ./snails-machine
+            else
+              tar czf ${FILENAME} -C ./target/${{ matrix.job.target }}/release ./snails-machine
+            fi
+          fi
+          echo "filename=${FILENAME}" >> GITHUB_OUTPUT
 
       - name: Save tar artifact
-        if: ${{ !contains(matrix.job.target, 'windows') }}
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.version }}-${{ matrix.job.target }}
-          path: ./${{ steps.tar.outputs.filename }}
-      
-      - name: Save zip artifact
-        if: contains(matrix.job.target, 'windows')
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.version }}-${{ matrix.job.target }}
-          path: ./${{ steps.zip.outputs.filename }}
+          path: ./${{ steps.archive.outputs.filename }}
 
 
         
