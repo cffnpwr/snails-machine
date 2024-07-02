@@ -111,7 +111,7 @@ jobs:
         id: tar
         run: |
           FILENAME=snails-machine-${{ inputs.version || steps.date.outputs.date }}-${{ matrix.job.target }}.tar.gz
-          tar czf ${FILENAME} -C target/release snails-machine${{ matrix.job.extension }}
+          tar czf ${FILENAME} -C target/${{ matrix.job.target }}/release snails-machine${{ matrix.job.extension }}
           echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
 
       - name: Save artifact
