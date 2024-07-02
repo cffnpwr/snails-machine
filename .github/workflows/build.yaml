@@ -59,16 +59,40 @@ jobs:
       - name: Setup rust
         run: rustup target add ${{ matrix.job.target }}
 
-      - name: Setup mold linker
-        uses: rui314/setup-mold@v1
+      - name: Setup compiler for Linux
+        if: contains(matrix.job.target, 'linux')
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq --no-install-recommends clang
 
       - name: Setup cross compiler for Linux
         if: startsWith(matrix.job.target, 'aarch64') && contains(matrix.job.target, 'linux')
+        run: sudo apt-get install -qq --no-install-recommends crossbuild-essential-arm64
+
+      - name: Setup mold linker
+        uses: rui314/setup-mold@v1
+      
+      - name: Set cargo config
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -qq --no-install-recommends \
-            clang \
-            crossbuild-essential-arm64
+          cat <<EOF > .cargo/config
+          [target.'cfg(all(target_arch = "x86_64", target_os = "linux"))']
+          linker = "clang"
+          rustflags = [
+            "-C",
+            "link-arg=-fuse-ld=mold",
+            "-C",
+            "link-args=-target x86_64-unknown-linux-gnu",
+          ]
+
+          [target.'cfg(all(target_arch = "aarch64", target_os = "linux"))']
+          linker = "clang"
+          rustflags = [
+            "-C",
+            "link-arg=-fuse-ld=mold",
+            "-C",
+            "link-args=-target aarch64-unknown-linux-gnu",
+          ]
+          EOF
 
       - name: Install GNU toolchain
         if: contains(matrix.job.target, 'windows') && contains(matrix.job.target, 'gnu')
